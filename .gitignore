@@ -1,5 +1,6 @@
 node_modules
 .env
+dist
 
 # SQLite database files
 *.sqlite
