@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "build": "npm install --prefix frontend && npm run build --prefix frontend"
+  },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
     "axios": "^1.13.6",
