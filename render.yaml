@@ -1,0 +1,24 @@
+# render.yaml — Render deployment configuration
+# Docs: https://render.com/docs/yaml-spec
+
+services:
+  - type: web
+    name: secure-hostel-backend
+    runtime: node
+    rootDir: backend          # tells Render to cd into /backend before everything
+    buildCommand: npm install
+    startCommand: npm start   # runs "node server.js" via the "start" script
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # ── Add the rest of these in the Render dashboard (Environment tab) ──────
+      # PORT is set automatically by Render — do NOT set it here
+      # JWT_SECRET
+      # GOOGLE_CLIENT_ID
+      # FIREBASE_PROJECT_ID
+      # FIREBASE_PRIVATE_KEY_ID
+      # FIREBASE_PRIVATE_KEY        ← paste with literal \n chars (Render handles them)
+      # FIREBASE_CLIENT_EMAIL
+      # FIREBASE_CLIENT_ID
+      # FIREBASE_CLIENT_CERT_URL
+      # FRONTEND_URL               ← your deployed frontend URL (for CORS)

@@ -1,35 +1,43 @@
+// Load environment variables FIRST — before any other require
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Allow requests from the frontend origin defined in the environment (Render /
+// local dev). Falls back to allowing all origins if FRONTEND_URL is not set.
+const allowedOrigins = process.env.FRONTEND_URL
+    ? [process.env.FRONTEND_URL]
+    : true; // true = allow all (open CORS)
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
+
+// ── Body parsing ──────────────────────────────────────────────────────────────
 app.use(express.json());
 
-// Routes
+// ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/requests', require('./routes/requests'));
 app.use('/api/gatepass', require('./routes/gatepass'));
 app.use('/api/security', require('./routes/security'));
 app.use('/api/notifications', require('./routes/security')); // notifications via security router
 
-// Basic Route for testing
+// ── Health-check / root ───────────────────────────────────────────────────────
 app.get('/', (req, res) => {
     res.json({ message: 'Secure Hostel Management API Running' });
 });
 
-// Export app for Vercel
+// ── Start server ──────────────────────────────────────────────────────────────
+// Render (and most PaaS hosts) set process.env.PORT. We default to 10000
+// which matches Render's default exposed port so health-checks succeed.
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
+
+// Also export for any serverless / test usage
 module.exports = app;
 
-// Start Server locally
-if (require.main === module) {
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
-}
