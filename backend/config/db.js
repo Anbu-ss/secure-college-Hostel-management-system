@@ -135,6 +135,37 @@ let db;
     }
 
     console.log('Schema migrations applied.');
+
+    // Auto-seed default admins if the database is empty
+    try {
+        const userCount = await db.get('SELECT COUNT(*) as count FROM Users');
+        if (userCount.count === 0) {
+            console.log('Database is empty. Running auto-seeding for default admin accounts...');
+            
+            const defaultAdmins = [
+                { name: 'Principal Admin', email: 'admin@dmice.edu', role: 'Admin', department: null },
+                { name: 'Hostel Warden', email: 'hostel.warden@dmice.edu', role: 'Warden', department: null },
+                { name: 'Gate Security Officer', email: 'gate.security@dmice.edu', role: 'Security', department: null }
+            ];
+
+            const depts = ['IT', 'CSE', 'ECE', 'EEE', 'MECH', 'AIML', 'AIDS', 'CIVIL'];
+            
+            depts.forEach(dept => {
+                defaultAdmins.push({ name: `HOD ${dept}`, email: `hod.${dept.toLowerCase()}@dmice.edu`, role: 'HOD', department: dept });
+                defaultAdmins.push({ name: `Staff ${dept}`, email: `staff.${dept.toLowerCase()}@dmice.edu`, role: 'Staff', department: dept });
+            });
+
+            for (const adminUser of defaultAdmins) {
+                await db.run(
+                    'INSERT INTO Users (Name, Email, Role, Department) VALUES (?, ?, ?, ?)',
+                    [adminUser.name, adminUser.email, adminUser.role, adminUser.department]
+                );
+            }
+            console.log(`✅ Auto-seeded ${defaultAdmins.length} admin accounts in SQLite.`);
+        }
+    } catch (err) {
+        console.error('Error auto-seeding admins:', err);
+    }
 })();
 
 const pool = {
