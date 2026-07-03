@@ -7,13 +7,36 @@ const cors = require('cors');
 const app = express();
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// Allow requests from the frontend origin defined in the environment (Render /
-// local dev). Falls back to allowing all origins if FRONTEND_URL is not set.
-const allowedOrigins = process.env.FRONTEND_URL
-    ? [process.env.FRONTEND_URL]
-    : true; // true = allow all (open CORS)
+// Allow requests from the frontend origin(s).
+const allowedOrigins = [
+    'https://secure-college-hostel-management-sy.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+];
 
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+if (process.env.FRONTEND_URL) {
+    const envOrigin = process.env.FRONTEND_URL.trim().replace(/\/$/, '');
+    if (!allowedOrigins.includes(envOrigin)) {
+        allowedOrigins.push(envOrigin);
+    }
+}
+
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+        if (!origin) return callback(null, true);
+        
+        // Remove trailing slash for comparison
+        const normalizedOrigin = origin.trim().replace(/\/$/, '');
+        
+        if (allowedOrigins.includes(normalizedOrigin)) {
+            callback(null, true);
+        } else {
+            callback(null, false);
+        }
+    },
+    credentials: true
+}));
 
 // ── Body parsing ──────────────────────────────────────────────────────────────
 app.use(express.json());
