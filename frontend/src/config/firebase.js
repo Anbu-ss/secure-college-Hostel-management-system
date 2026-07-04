@@ -3,7 +3,7 @@
 
 import { initializeApp } from 'firebase/app';
 import { getAuth }       from 'firebase/auth';
-import { getAnalytics }  from 'firebase/analytics';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
 const firebaseConfig = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,9 +15,26 @@ const firebaseConfig = {
   measurementId:     import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app      = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+const app = initializeApp(firebaseConfig);
 
+// Analytics can fail in localhost / privacy-restricted browsers — never let it
+// block the rest of the app from loading.
+let analytics = null;
+isSupported()
+  .then((supported) => {
+    if (supported) {
+      try {
+        analytics = getAnalytics(app);
+      } catch (e) {
+        console.warn('Firebase Analytics could not be initialized:', e.message);
+      }
+    }
+  })
+  .catch(() => {
+    // silently ignore — analytics is optional
+  });
+
+export { analytics };
 export const firebaseAuth = getAuth(app);
 export default app;
 
