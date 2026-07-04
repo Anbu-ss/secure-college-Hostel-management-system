@@ -50,12 +50,6 @@ const LandingLogin = () => {
             <span>Waking up server (1 min)...</span>
           </div>
         )}
-        {serverState === 'connected' && (
-          <div className="bg-emerald-500/20 backdrop-blur text-emerald-200 border border-emerald-500/30 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center space-x-1.5 shadow-md">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span>Connected</span>
-          </div>
-        )}
       </div>
       {/* Header */}
       <div className="text-center pt-14 pb-8 px-4">
