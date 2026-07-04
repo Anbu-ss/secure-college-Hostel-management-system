@@ -100,6 +100,8 @@ let db;
             CreatedByID INTEGER,
             CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE INDEX IF NOT EXISTS idx_notifications_userid ON Notifications(UserID);
     `);
 
     // Run migrations for existing databases (add columns if not present)
@@ -124,6 +126,8 @@ let db;
         // Smart PDF: photo and signature support
         `ALTER TABLE Students ADD COLUMN PhotoURL TEXT DEFAULT NULL`,
         `ALTER TABLE Users ADD COLUMN SignatureURL TEXT DEFAULT NULL`,
+        // Database optimization
+        `CREATE INDEX IF NOT EXISTS idx_notifications_userid ON Notifications(UserID)`,
     ];
 
     for (const migration of migrations) {

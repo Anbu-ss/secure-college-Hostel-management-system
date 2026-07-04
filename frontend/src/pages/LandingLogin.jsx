@@ -1,15 +1,62 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, GraduationCap, ArrowRight } from 'lucide-react';
+import axios from 'axios';
 
 // The landing page — two large portal cards
 const LandingLogin = () => {
   const navigate = useNavigate();
+  const [serverState, setServerState] = useState('checking'); // 'checking' | 'sleeping' | 'connected'
+
+  useEffect(() => {
+    const checkServer = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        setServerState('sleeping');
+      }, 1500); // Alert user if server takes more than 1.5s (likely cold starting)
+
+      try {
+        await axios.get('/', { signal: controller.signal });
+        setServerState('connected');
+      } catch (err) {
+        if (err.response) {
+          setServerState('connected');
+        } else {
+          setServerState('sleeping');
+        }
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
+    checkServer();
+  }, []);
 
   return (
-    <div className="min-h-screen flex flex-col" style={{
+    <div className="min-h-screen flex flex-col relative" style={{
       background: 'linear-gradient(135deg, #1e3a5f 0%, #2d6a9f 50%, #1a5276 100%)'
     }}>
+      {/* Server Status Pill */}
+      <div className="fixed top-4 right-4 z-50">
+        {serverState === 'checking' && (
+          <div className="bg-white/10 backdrop-blur text-blue-200 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center space-x-1.5 shadow-md">
+            <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+            <span>Connecting...</span>
+          </div>
+        )}
+        {serverState === 'sleeping' && (
+          <div className="bg-amber-500/20 backdrop-blur text-amber-200 border border-amber-500/30 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center space-x-1.5 shadow-md">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span>Waking up server (1 min)...</span>
+          </div>
+        )}
+        {serverState === 'connected' && (
+          <div className="bg-emerald-500/20 backdrop-blur text-emerald-200 border border-emerald-500/30 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center space-x-1.5 shadow-md">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>Connected</span>
+          </div>
+        )}
+      </div>
       {/* Header */}
       <div className="text-center pt-14 pb-8 px-4">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur mb-4">

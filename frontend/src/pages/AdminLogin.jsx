@@ -12,6 +12,7 @@ const AdminLogin = () => {
   const [showPwd, setShowPwd]   = useState(false);
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+  const [showDelayMessage, setShowDelayMessage] = useState(false);
   const { login } = useAuth();
   const navigate  = useNavigate();
 
@@ -19,6 +20,11 @@ const AdminLogin = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+    setShowDelayMessage(false);
+
+    const timer = setTimeout(() => {
+      setShowDelayMessage(true);
+    }, 3000);
 
     try {
       // Step 1: Authenticate with Firebase
@@ -41,7 +47,9 @@ const AdminLogin = () => {
         setError(err.response?.data?.message || 'Sign-in failed. Please try again.');
       }
     } finally {
+      clearTimeout(timer);
       setLoading(false);
+      setShowDelayMessage(false);
     }
   };
 
@@ -96,6 +104,16 @@ const AdminLogin = () => {
             <div className="mb-5 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-start">
               <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
               <span className="text-sm">{error}</span>
+            </div>
+          )}
+
+          {showDelayMessage && (
+            <div className="mb-5 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl flex items-start animate-pulse">
+              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-amber-600" />
+              <div className="text-xs">
+                <p className="font-bold">⏳ Server is waking up</p>
+                <p className="mt-0.5">We are using free-tier hosting. The database can take up to a minute to start on the first request. Please wait...</p>
+              </div>
             </div>
           )}
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import { LogOut, Home, ClipboardList, Shield, FileText, CheckCircle, Users, Bell, MapPin, LayoutDashboard, Sun, Upload, Zap } from 'lucide-react';
+import { LogOut, Home, ClipboardList, Shield, FileText, CheckCircle, Users, Bell, MapPin, LayoutDashboard, Sun, Upload, Zap, Menu, X } from 'lucide-react';
 
 const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
@@ -128,6 +128,7 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [pendingCount, setPendingCount] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Which nav path gets the badge, keyed by role
   const badgePathByRole = {
@@ -254,12 +255,90 @@ const Layout = ({ children }) => {
         </div>
       </div>
 
+      {/* Mobile Drawer (Sidebar) */}
+      {drawerOpen && (
+        <div className="fixed inset-0 z-45 flex md:hidden" role="dialog" aria-modal="true">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-gray-900/50 backdrop-blur-xs transition-opacity duration-300" 
+            onClick={() => setDrawerOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative flex flex-col w-full max-w-xs bg-white shadow-xl animate-in slide-in-from-left duration-300 z-50">
+            {/* Header / Close button */}
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-primary-600">Secure Hostel</h2>
+                <p className="text-xs text-gray-500 mt-1 capitalize">{user?.role} Portal</p>
+              </div>
+              <button
+                onClick={() => setDrawerOpen(false)}
+                className="p-1.5 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Nav links */}
+            <div className="flex-1 overflow-y-auto py-4">
+              <nav className="space-y-1 px-2">
+                {navLinks.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.path ||
+                    (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+                  const showBadge = item.path === badgePathByRole[user?.role] && pendingCount > 0;
+                  return (
+                    <Link
+                      key={item.name} to={item.path}
+                      onClick={() => setDrawerOpen(false)}
+                      className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                        isActive ? 'bg-primary-50 text-primary-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                      }`}
+                    >
+                      <Icon className={`mr-3 flex-shrink-0 h-5 w-5 ${isActive ? 'text-primary-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
+                      <span className="flex-1">{item.name}</span>
+                      {showBadge && (
+                        <span className="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-bold bg-red-500 text-white animate-pulse">
+                          {pendingCount > 99 ? '99+' : pendingCount}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Profile + Logout */}
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">{user?.name}</p>
+                  <p className="text-xs font-medium text-gray-500">{user?.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setDrawerOpen(false); handleLogout(); }}
+                className="flex items-center w-full px-2 py-2 text-sm font-medium text-red-600 rounded-md hover:bg-red-50"
+              >
+                <LogOut className="mr-3 h-5 w-5 text-red-500" />Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
         <header className="bg-white shadow-sm md:hidden">
           <div className="px-4 py-3 flex justify-between items-center">
-            <h2 className="text-lg font-bold text-primary-600">Secure Hostel</h2>
+            <div className="flex items-center space-x-3">
+              <button onClick={() => setDrawerOpen(true)} className="p-1 rounded-md text-gray-500 hover:text-gray-900 hover:bg-gray-100 focus:outline-none">
+                <Menu className="h-6 w-6" />
+              </button>
+              <h2 className="text-lg font-bold text-primary-600">Secure Hostel</h2>
+            </div>
             <div className="flex items-center space-x-2">
               <NotificationBell />
               <button onClick={handleLogout} className="text-red-600 hover:text-red-800">

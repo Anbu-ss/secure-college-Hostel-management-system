@@ -10,6 +10,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDelayMessage, setShowDelayMessage] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -18,6 +19,11 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+    setShowDelayMessage(false);
+
+    const timer = setTimeout(() => {
+      setShowDelayMessage(true);
+    }, 3000);
 
     try {
       const response = await axios.post('/api/auth/login', { email, password });
@@ -26,7 +32,9 @@ const Login = () => {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to login. Please try again.');
     } finally {
+      clearTimeout(timer);
       setIsLoading(false);
+      setShowDelayMessage(false);
     }
   };
 
@@ -74,6 +82,16 @@ const Login = () => {
             <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
               <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
               <span className="text-sm">{error}</span>
+            </div>
+          )}
+
+          {showDelayMessage && (
+            <div className="mb-4 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg flex items-start animate-pulse">
+              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5 text-amber-600" />
+              <div className="text-xs">
+                <p className="font-bold">⏳ Server is waking up</p>
+                <p className="mt-0.5">We are using free-tier hosting. The database can take up to a minute to start on the first request. Please wait...</p>
+              </div>
             </div>
           )}
 
