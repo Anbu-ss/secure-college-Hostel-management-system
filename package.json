@@ -1,14 +1,54 @@
 {
+  "name": "secure-college-hostel",
+  "version": "1.0.0",
+  "description": "Secure College Hostel Management System",
+  "main": "src/server/server.js",
   "scripts": {
-    "build": "npm install --prefix frontend && npm run build --prefix frontend -- --outDir ../dist --emptyOutDir"
+    "dev": "concurrently \"npm:server\" \"npm:client\"",
+    "server": "nodemon src/server/server.js",
+    "client": "vite",
+    "build": "vite build",
+    "start": "node src/server/server.js",
+    "preview": "vite preview",
+    "test": "node --test tests/unit/*.test.js tests/integration/*.test.js",
+    "setup-admin": "node scripts/setup-admin.js",
+    "seed-credentials": "node scripts/seed-credentials.js",
+    "check-user": "node scripts/check-user.js",
+    "diagnose": "node scripts/diagnose.js"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.2.1",
+    "@react-oauth/google": "^0.13.4",
+    "@yudiel/react-qr-scanner": "^2.5.1",
     "axios": "^1.13.6",
-    "firebase": "^12.10.0",
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "date-fns": "^4.1.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "firebase": "^12.11.0",
     "firebase-admin": "^13.7.0",
+    "google-auth-library": "^10.6.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.0",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.577.0",
+    "mammoth": "^1.9.0",
+    "qrcode": "^1.5.4",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-qr-scanner": "^1.0.0-alpha.11",
     "react-router-dom": "^7.13.1",
-    "tailwindcss": "^4.2.1"
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "@vitejs/plugin-react": "^5.1.4",
+    "concurrently": "^9.1.2",
+    "nodemon": "^3.1.14",
+    "tailwindcss": "^4.2.1",
+    "vite": "^7.3.1"
   }
 }

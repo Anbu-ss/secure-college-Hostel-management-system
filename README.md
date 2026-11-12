@@ -1,62 +1,93 @@
-# Secure Hostel Management System
+# Secure College Hostel Management System
 
-A digital gate pass system enabling secure online requests, staff and HOD approvals, and QR-code based security scanning for students.
+A digital gate pass and secure campus monitoring system enabling role-based online requests, multi-tier staff and HOD approvals, warden tracking, holiday mode auto-approvals, and QR-code-based security scanning for students.
 
-## Architecture
+---
 
-- **Backend**: Node.js, Express, MySQL, JWT Auth
-- **Frontend**: React, Vite, Tailwind CSS, React Router
+## 🏗️ Unified Architecture
 
-## Prerequisites
+The project follows a **Feature-Based Modular Architecture** unified in a single root repository:
 
-- Node.js installed
-- MySQL Server running
+```
+secure-college-hostel/
+├── public/                 # Static assets (images, icons, assets)
+├── src/
+│   ├── app/                # App shell, main entry, router, API client
+│   ├── features/           # Feature-sliced modules
+│   │   ├── auth/           # Login, Register, AdminLogin, AuthContext, auth routes
+│   │   ├── gatepass/       # ApplyPass, StudentPasses, Staff/HOD approvals, routes
+│   │   ├── warden/         # Warden Dashboard, Approvals, All Passes
+│   │   ├── security/       # QR Scanning, Security Gate Logs, Occupancy, routes
+│   │   ├── admin/          # Admin account creation, Bulk upload, Holiday mode
+│   │   └── notifications/  # Notification center routes
+│   ├── shared/             # Shared components (Layout, StatusBadge), config, styles
+│   ├── middleware/         # Auth & role verification middleware
+│   ├── utils/              # Logger, validators, helpers, GatePassPDF
+│   └── server/             # Express server setup and route mountings
+├── config/                 # Database, Firebase, App, and Security configurations
+├── database/               # Schema documentation, migrations, seeds, SQLite database
+├── scripts/                # Admin setup, credential seeding, and diagnostic scripts
+├── tests/                  # Unit and integration test suites
+├── docs/                   # Architecture, API documentation, and setup guides
+├── .env                    # Local environment variables (do not commit)
+├── .env.example            # Environment variables template
+├── package.json            # Unified dependencies and project scripts
+├── vite.config.js          # Vite bundler configuration with SPA fallback
+├── render.yaml             # Render backend deployment descriptor
+└── vercel.json             # Vercel frontend deployment descriptor
+```
 
-## Database Setup
+---
 
-1. Open your MySQL client (e.g., MySQL Workbench or CLI).
-2. Execute the `database.sql` script located in the root of the project to create the `secure_hostel_db` and its tables.
+## ⚡ Quick Start
 
-## Backend Setup
+### 1. Prerequisites
+- Node.js (v18.0.0 or higher)
+- npm (v8.0.0 or higher)
 
-1. Open a terminal and navigate to the `backend` folder:
-   ```bash
-   cd backend
-   ```
-2. Configure `.env`:
-   Ensure `DB_USER` and `DB_PASSWORD` in `backend/.env` match your local MySQL credentials.
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Start the backend API:
-   ```bash
-   npm run dev
-   ```
-   *The server runs on http://localhost:5000*
+### 2. Installation
+```bash
+npm install
+```
 
-## Frontend Setup
+### 3. Environment Variables
+Copy the template and fill in your values:
+```bash
+cp .env.example .env
+```
 
-1. Open a new terminal and navigate to the `frontend` folder:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-   If needed, this project uses `@yudiel/react-qr-scanner`, `qrcode.react`, `lucide-react`, `tailwindcss`, `axios`, and `react-router-dom`.
-3. Start the Vite development server:
-   ```bash
-   npm run dev
-   ```
-   *The app runs on http://localhost:5173*
+### 4. Running the Application
 
-## Using the System
+| Command | Description |
+|---|---|
+| `npm run dev` | Runs both backend server and Vite frontend client concurrently |
+| `npm run server` | Runs Express backend only on `http://localhost:5000` (or `PORT`) |
+| `npm run client` | Runs Vite frontend client only on `http://localhost:5173` |
+| `npm run build` | Builds frontend production bundle into `dist/` |
+| `npm run start` | Starts backend production server |
+| `npm run test` | Runs unit and integration test suites |
 
-1. **Register**: Start by registering users with different roles (Student, Staff, HOD, Warden, Security).
-2. **Student Flow**: Login as a Student -> Apply for a Pass -> Wait for approval.
-3. **Approval Flow**: Staff logs in to approve -> HOD logs in to final approve.
-4. **QR Code**: Once approved by HOD, a digital QR Pass is generated in the Student's "My Gate Passes" tab.
-5. **Security**: Security logs in -> Scans QR Code -> Logs Exit or Entry.
-6. **Warden**: Warden logs in -> Views all generated passes and monitors security logs.
+---
+
+## 🔑 Administrative Scripts
+
+```bash
+# Set up initial Super Admin
+npm run setup-admin
+
+# Seed departmental and administrative credentials
+npm run seed-credentials
+
+# Check student or user account
+npm run check-user
+
+# Run system diagnostic
+npm run diagnose
+```
+
+---
+
+## 🚀 Deployment
+
+- **Frontend (Vercel)**: Configured in `vercel.json` (`npm run build` targeting `dist`).
+- **Backend (Render)**: Configured in `render.yaml` (`npm install` & `npm start` from root).

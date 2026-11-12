@@ -1,6 +1,6 @@
 {
   "cleanUrls": true,
-  "buildCommand": "npm install --prefix frontend && npm run build --prefix frontend -- --outDir ../dist --emptyOutDir",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
     {
