@@ -33,6 +33,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: true,
+    port: 5173,
     proxy: {
       '/api': {
         target: `http://localhost:${process.env.PORT || 5000}`,

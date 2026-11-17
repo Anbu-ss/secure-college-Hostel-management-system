@@ -14,11 +14,11 @@ const ApplyPass = () => {
     passType: 'Local'
   });
 
-  const [profile, setProfile]   = useState(null);   // student's DB profile
+  const [profile, setProfile] = useState(null); // student's DB profile
   const [profileLoading, setProfileLoading] = useState(true);
 
-  const [error, setError]       = useState('');
-  const [success, setSuccess]   = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -67,13 +67,45 @@ const ApplyPass = () => {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (!formData.destination || !formData.reason || !formData.outTime || !formData.expectedReturnTime) {
+      setError('Please fill in all required fields.');
+      return;
+    }
+
+    const departure = new Date(formData.outTime);
+    const expectedReturn = new Date(formData.expectedReturnTime);
+
+    if (expectedReturn <= departure) {
+      setError('Expected return time must be strictly after departure time.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await axios.post('/api/requests/apply', formData);
+      const [dDate, dTime] = formData.outTime.split('T');
+      const [rDate, rTime] = formData.expectedReturnTime.split('T');
+      await axios.post('/api/gate-passes', {
+        reason: formData.reason,
+        destination: formData.destination,
+        departureDate: dDate,
+        departureTime: dTime?.slice(0, 5) || '00:00',
+        returnDate: rDate,
+        returnTime: rTime?.slice(0, 5) || '23:59',
+        outTime: formData.outTime,
+        expectedReturnTime: formData.expectedReturnTime,
+        passType: formData.passType
+      });
       setSuccess('Gate pass request submitted successfully!');
-      setTimeout(() => navigate('/student/passes'), 2000);
+      setTimeout(() => navigate('/student/passes'), 1500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit request.');
+      try {
+        await axios.post('/api/requests/apply', formData);
+        setSuccess('Gate pass request submitted successfully!');
+        setTimeout(() => navigate('/student/passes'), 1500);
+      } catch (fallbackErr) {
+        setError(err.response?.data?.message || fallbackErr.response?.data?.message || 'Failed to submit request.');
+      }
     } finally {
       setIsLoading(false);
     }
