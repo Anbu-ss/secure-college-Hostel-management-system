@@ -13,7 +13,9 @@ CREATE TABLE IF NOT EXISTS Users (
     Department TEXT DEFAULT NULL,
     GoogleID TEXT UNIQUE,
     SignatureURL TEXT DEFAULT NULL,
-    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    Status TEXT DEFAULT 'ACTIVE',
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS Students (
@@ -59,15 +61,6 @@ CREATE TABLE IF NOT EXISTS GatePasses (
     FOREIGN KEY (RequestID) REFERENCES GatePassRequests(ID) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS SecurityLogs (
-    ID INTEGER PRIMARY KEY AUTOINCREMENT,
-    GatePassID INTEGER NOT NULL,
-    Action TEXT NOT NULL,
-    ScannedBy INTEGER NOT NULL,
-    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (GatePassID) REFERENCES GatePasses(ID) ON DELETE CASCADE,
-    FOREIGN KEY (ScannedBy) REFERENCES Users(ID)
-);
 
 CREATE TABLE IF NOT EXISTS Notifications (
     ID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -88,4 +81,85 @@ CREATE TABLE IF NOT EXISTS HolidayWindows (
     CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS PasswordResetTokens (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    UserID INTEGER NOT NULL,
+    TokenHash TEXT NOT NULL,
+    ExpiresAt DATETIME NOT NULL,
+    Used INTEGER DEFAULT 0,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES Users(ID) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS AuthAuditLogs (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    UserID INTEGER,
+    Identifier TEXT,
+    Action TEXT NOT NULL,
+    IPAddress TEXT,
+    UserAgent TEXT,
+    Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS StudentProfiles (
+    UserID INTEGER PRIMARY KEY,
+    DateOfBirth TEXT,
+    PersonalEmail TEXT,
+    PhoneNumber TEXT,
+    Gender TEXT,
+    PermanentAddress TEXT,
+    CurrentAddress TEXT,
+    City TEXT,
+    District TEXT,
+    State TEXT,
+    PostalCode TEXT,
+    GuardianName TEXT,
+    GuardianRelationship TEXT,
+    GuardianPhone TEXT,
+    EmergencyContact TEXT,
+    ProfileCompletion INTEGER DEFAULT 25,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UpdatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES Users(ID) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS StudentImportBatches (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    UploadedByID INTEGER,
+    FileName TEXT NOT NULL,
+    TotalRecords INTEGER DEFAULT 0,
+    SuccessfulRecords INTEGER DEFAULT 0,
+    FailedRecords INTEGER DEFAULT 0,
+    DuplicateRecords INTEGER DEFAULT 0,
+    Status TEXT DEFAULT 'COMPLETED',
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UploadedByID) REFERENCES Users(ID)
+);
+
+CREATE TABLE IF NOT EXISTS StudentImportErrors (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    BatchID INTEGER,
+    RowNumber INTEGER,
+    RegisterNumber TEXT,
+    ErrorType TEXT,
+    ErrorMessage TEXT,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (BatchID) REFERENCES StudentImportBatches(ID) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS ActivationTokens (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    RegisterNumber TEXT NOT NULL,
+    UserID INTEGER,
+    TokenHash TEXT NOT NULL,
+    ActivationCode TEXT NOT NULL,
+    ExpiresAt DATETIME NOT NULL,
+    Used INTEGER DEFAULT 0,
+    CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (UserID) REFERENCES Users(ID) ON DELETE CASCADE
+);
+
 CREATE INDEX IF NOT EXISTS idx_notifications_userid ON Notifications(UserID);
+CREATE INDEX IF NOT EXISTS idx_users_email ON Users(Email);
+CREATE INDEX IF NOT EXISTS idx_students_regno ON Students(RegisterNumber);
+CREATE INDEX IF NOT EXISTS idx_activation_regno ON ActivationTokens(RegisterNumber);

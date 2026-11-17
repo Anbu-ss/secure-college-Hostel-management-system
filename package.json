@@ -12,12 +12,11 @@
     "preview": "vite preview",
     "test": "node --test tests/unit/*.test.js tests/integration/*.test.js",
     "setup-admin": "node scripts/setup-admin.js",
-    "seed-credentials": "node scripts/seed-credentials.js",
-    "check-user": "node scripts/check-user.js",
-    "diagnose": "node scripts/diagnose.js"
+    "reset-db": "node scripts/reset-database.js"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.4",
+    "@supabase/supabase-js": "^2.119.0",
     "@yudiel/react-qr-scanner": "^2.5.1",
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
@@ -29,8 +28,8 @@
     "firebase-admin": "^13.7.0",
     "google-auth-library": "^10.6.1",
     "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.0",
     "jsonwebtoken": "^9.0.3",
+    "jspdf": "^3.0.0",
     "lucide-react": "^0.577.0",
     "mammoth": "^1.9.0",
     "qrcode": "^1.5.4",

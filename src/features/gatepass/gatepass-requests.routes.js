@@ -95,11 +95,34 @@ router.get('/my-profile', verifyToken, verifyRole(['Student']), async (req, res)
             `SELECT u.Name, u.Email, s.RegisterNumber, s.Block, s.RoomNumber, s.Department
              FROM Students s
              JOIN Users u ON u.ID = s.UserID
-             WHERE s.UserID = ?`,
-            [req.user.id]
+             WHERE s.UserID = ? OR LOWER(u.Email) = LOWER(?)`,
+            [req.user.id, req.user.email || '']
         );
-        if (rows.length === 0) return res.status(404).json({ message: 'Student profile not found.' });
-        res.json(rows[0]);
+        if (rows.length > 0) return res.json(rows[0]);
+
+        // Fallback to Supabase if not found in local table
+        try {
+            const { supabase } = require('../../../config/supabase.config');
+            if (supabase) {
+                const { data: stRow } = await supabase
+                    .from('students')
+                    .select('student_name, register_number, college_email, hostel_block, room_number, department')
+                    .eq('college_email', req.user.email)
+                    .maybeSingle();
+                if (stRow) {
+                    return res.json({
+                        Name: stRow.student_name,
+                        Email: stRow.college_email,
+                        RegisterNumber: stRow.register_number,
+                        Block: stRow.hostel_block || 'DMI Boys Hostel Block A',
+                        RoomNumber: stRow.room_number || '101',
+                        Department: stRow.department || 'CSE'
+                    });
+                }
+            }
+        } catch (_) {}
+
+        return res.status(404).json({ message: 'Student profile not found.' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error fetching profile.' });

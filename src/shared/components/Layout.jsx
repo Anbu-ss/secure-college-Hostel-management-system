@@ -134,15 +134,15 @@ const Layout = ({ children }) => {
   const badgePathByRole = {
     Staff:  '/staff/pending',
     HOD:    '/hod/pending',
-    Warden: '/warden/approvals',
-    Admin:  '/warden/approvals',
+    Warden: '/admin/gate-passes',
+    Admin:  '/admin/gate-passes',
   };
 
   const pendingEndpointByRole = {
     Staff:  '/api/requests/staff/pending',
     HOD:    '/api/requests/hod/pending',
-    Warden: '/api/requests/warden/pending',
-    Admin:  '/api/requests/warden/pending',
+    Warden: '/api/admin/gate-passes?status=PENDING',
+    Admin:  '/api/admin/gate-passes?status=PENDING',
   };
 
   useEffect(() => {
@@ -152,7 +152,11 @@ const Layout = ({ children }) => {
     const fetchCount = async () => {
       try {
         const res = await axios.get(endpoint);
-        setPendingCount(Array.isArray(res.data) ? res.data.length : 0);
+        if (Array.isArray(res.data?.requests)) {
+          setPendingCount(res.data.requests.length);
+        } else if (Array.isArray(res.data)) {
+          setPendingCount(res.data.length);
+        }
       } catch {}
     };
 
@@ -167,33 +171,33 @@ const Layout = ({ children }) => {
     switch (user?.role) {
       case 'Student':
         return [
-          { name: 'Apply Pass', path: '/student/apply', icon: FileText },
-          { name: 'My Passes', path: '/student/passes', icon: ClipboardList },
+          { name: 'Dashboard',   path: '/student/dashboard', icon: LayoutDashboard },
+          { name: 'Apply Pass',  path: '/student/apply',     icon: FileText },
+          { name: 'My Passes',   path: '/student/passes',    icon: ClipboardList },
+          { name: 'My Profile',  path: '/student/profile',   icon: Users },
         ];
       case 'Staff':
         return [
-          { name: 'Pending Requests', path: '/staff/pending', icon: ClipboardList },
-          { name: 'Bulk Student Upload', path: '/admin/bulk-upload', icon: Upload },
+          { name: 'Pending Requests',  path: '/staff/pending',      icon: ClipboardList },
+          { name: 'Student Directory', path: '/admin/students',     icon: Users },
         ];
       case 'HOD':
         return [
-          { name: 'Final Approvals',  path: '/hod/pending',     icon: CheckCircle },
-          { name: 'Holiday Mode',     path: '/admin/holiday-mode', icon: Sun },
+          { name: 'Final Approvals',   path: '/hod/pending',        icon: CheckCircle },
+          { name: 'Student Directory', path: '/admin/students',     icon: Users },
+          { name: 'Holiday Mode',      path: '/admin/holiday-mode', icon: Sun },
         ];
       case 'Warden':
+      case 'Admin':
+      case 'Super Admin':
+      case 'SuperAdmin':
         return [
+          { name: 'Gate Pass Management', path: '/admin/gate-passes', icon: ClipboardList },
+          { name: 'Student Directory', path: '/admin/students',     icon: Users },
           { name: 'Occupancy Map',     path: '/warden/dashboard',   icon: LayoutDashboard },
           { name: 'Approve Requests',  path: '/warden/approvals',   icon: CheckCircle },
-          { name: 'All Passes',        path: '/warden/passes',      icon: Users },
-          { name: 'Security Logs',     path: '/security/logs',      icon: Shield },
           { name: 'Create Admin User', path: '/admin/create-user',  icon: Users },
-          { name: 'Bulk Upload',       path: '/admin/bulk-upload',   icon: Upload },
-          { name: 'Holiday Mode',      path: '/admin/holiday-mode',  icon: Sun },
-        ];
-      case 'Security':
-        return [
-          { name: 'Scan QR', path: '/security/scan', icon: CheckCircle },
-          { name: 'Gate Logs', path: '/security/logs', icon: ClipboardList },
+          { name: 'Holiday Mode',      path: '/admin/holiday-mode', icon: Sun },
         ];
       default:
         return [];

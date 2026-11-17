@@ -1,118 +1,74 @@
 /**
- * setup-admin.js — ONE-TIME Super Admin Setup Script
- * ─────────────────────────────────────────────────────
- * Run this ONCE to create the first Super Admin account.
+ * setup-admin.js — Secure Institutional Admin Setup Script
+ * ─────────────────────────────────────────────────────────────
+ * Creates or configures an authorized Institutional User (Admin, Warden, Staff, Security)
+ * in Supabase Auth & public.profiles with 10-round bcrypt hashing.
  *
  * Usage:
- *   cd backend
- *   node setup-admin.js
+ *   node scripts/setup-admin.js <email> <password> "<Full Name>" <ROLE>
  *
- * After running, you can log in at /admin/login with the
- * email and password you set below.
+ * Example:
+ *   node scripts/setup-admin.js principal@hostel.edu SecureAdminPass2026! "Hostel Director" ADMIN
+ *
+ * If arguments are omitted, it reads from environment variables:
+ *   ADMIN_SETUP_EMAIL, ADMIN_SETUP_PASSWORD, ADMIN_SETUP_NAME, ADMIN_SETUP_ROLE
  */
 
 require('dotenv').config();
+const { supabase } = require('../config/supabase.config');
 
-const admin   = require('firebase-admin');
-const sqlite3 = require('sqlite3').verbose();
-const { open } = require('sqlite');
-const path    = require('path');
+async function setupAdmin() {
+  const args = process.argv.slice(2);
+  const email = (args[0] || process.env.ADMIN_SETUP_EMAIL || '').trim();
+  const password = (args[1] || process.env.ADMIN_SETUP_PASSWORD || '').trim();
+  const fullName = (args[2] || process.env.ADMIN_SETUP_NAME || 'Principal Administrator').trim();
+  const role = (args[3] || process.env.ADMIN_SETUP_ROLE || 'ADMIN').toUpperCase().trim();
 
-// ──────────────────────────────────────────────────────────
-// 🔧 EDIT THESE BEFORE RUNNING
-// ──────────────────────────────────────────────────────────
-const SUPER_ADMIN = {
-  name:        'Principal Admin',          // Change to your name
-  email:       'admin@dmice.edu',          // Change to your admin email
-  password:    'Admin@2026!',             // Change to a strong password
-  collegeName: 'DMICE',
-};
-// ──────────────────────────────────────────────────────────
-
-async function createSuperAdmin() {
-  console.log('\n🚀 Secure Hostel — Super Admin Setup\n');
-
-  // 1. Init Firebase Admin SDK
-  const serviceAccount = {
-    type:                        'service_account',
-    project_id:                  process.env.FIREBASE_PROJECT_ID,
-    private_key_id:              process.env.FIREBASE_PRIVATE_KEY_ID,
-    private_key:                 process.env.FIREBASE_PRIVATE_KEY
-                                   ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/^"(.*)"$/, '$1')
-                                   : undefined,
-    client_email:                process.env.FIREBASE_CLIENT_EMAIL,
-    client_id:                   process.env.FIREBASE_CLIENT_ID,
-    auth_uri:                    'https://accounts.google.com/o/oauth2/auth',
-    token_uri:                   'https://oauth2.googleapis.com/token',
-    auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-    client_x509_cert_url:        process.env.FIREBASE_CLIENT_CERT_URL,
-  };
-
-  if (!admin.apps.length) {
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  if (!email || !password) {
+    console.error('❌ Error: Email and password are required.');
+    console.log('\nUsage:');
+    console.log('  node scripts/setup-admin.js <email> <password> "[Full Name]" [ROLE]');
+    console.log('\nSupported roles: ADMIN, SUPER_ADMIN, WARDEN, STAFF, SECURITY');
+    process.exit(1);
   }
-  const firebaseAuth = admin.auth();
 
-  // 2. Connect to SQLite
-  const db = await open({
-    filename: process.env.DB_PATH || path.join(__dirname, '../database/database.sqlite'),
-    driver:   sqlite3.Database,
-  });
+  if (password.length < 6) {
+    console.error('❌ Error: Password must be at least 6 characters.');
+    process.exit(1);
+  }
+
+  console.log(`\n🚀 Initializing Institutional User in Supabase...`);
+  console.log(`   Email: ${email}`);
+  console.log(`   Name:  ${fullName}`);
+  console.log(`   Role:  ${role}\n`);
 
   try {
-    // 3. Create Firebase Auth user
-    console.log(`📧 Creating Firebase account: ${SUPER_ADMIN.email} ...`);
-    let fbUser;
-    try {
-      fbUser = await firebaseAuth.createUser({
-        email:        SUPER_ADMIN.email,
-        password:     SUPER_ADMIN.password,
-        displayName:  SUPER_ADMIN.name,
-        emailVerified: true,
-      });
-      console.log(`✅ Firebase user created: ${fbUser.uid}`);
-    } catch (err) {
-      if (err.code === 'auth/email-already-exists') {
-        console.log(`⚠️  Firebase: Email already exists — skipping Firebase creation.`);
-        fbUser = await firebaseAuth.getUserByEmail(SUPER_ADMIN.email);
-      } else {
-        throw err;
-      }
+    const { data, error } = await supabase.rpc('create_institutional_user', {
+      p_email: email,
+      p_password: password,
+      p_full_name: fullName,
+      p_role: role
+    });
+
+    if (error) {
+      console.error('❌ Failed to create institutional user:', error.message);
+      process.exit(1);
     }
 
-    // 4. Save in SQLite as Role = 'Admin'
-    console.log(`💾 Saving to SQLite database...`);
-    const existing = await db.get('SELECT ID FROM Users WHERE Email = ?', [SUPER_ADMIN.email]);
-    if (existing) {
-      console.log(`⚠️  SQLite: User already exists (ID: ${existing.ID}) — skipping insert.`);
-    } else {
-      const result = await db.run(
-        'INSERT INTO Users (Name, Email, Role, Department) VALUES (?, ?, ?, ?)',
-        [SUPER_ADMIN.name, SUPER_ADMIN.email, 'Admin', null]
-      );
-      console.log(`✅ SQLite user saved: ID = ${result.lastID}`);
+    if (!data?.success) {
+      console.error('❌ RPC Error:', data?.message || 'Unable to create user.');
+      process.exit(1);
     }
 
-    console.log('\n══════════════════════════════════════════════');
-    console.log('🎉 Super Admin created successfully!');
-    console.log('──────────────────────────────────────────────');
-    console.log(`   Name     : ${SUPER_ADMIN.name}`);
-    console.log(`   Email    : ${SUPER_ADMIN.email}`);
-    console.log(`   Password : ${SUPER_ADMIN.password}`);
-    console.log(`   Role     : Admin (Super Admin)`);
-    console.log('──────────────────────────────────────────────');
-    console.log('👉 Go to http://localhost:5173 → Admin Portal');
-    console.log('   Sign in with the email and password above.');
-    console.log('══════════════════════════════════════════════\n');
-
+    console.log('✅ Institutional account successfully provisioned in Supabase Auth!');
+    console.log(`   User ID: ${data.user_id}`);
+    console.log(`   Role:    ${data.role}`);
+    console.log(`   Status:  ACTIVE`);
+    console.log('\nYou can now log in securely through the portal.\n');
   } catch (err) {
-    console.error('\n❌ Error creating Super Admin:', err.message);
-    if (err.code) console.error('   Code:', err.code);
-  } finally {
-    await db.close();
-    console.log('Database connection closed.');
-    process.exit(0);
+    console.error('❌ Unexpected error:', err.message);
+    process.exit(1);
   }
 }
 
-createSuperAdmin();
+setupAdmin();

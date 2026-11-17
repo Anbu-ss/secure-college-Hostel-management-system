@@ -1,265 +1,266 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { firebaseAuth } from '../../shared/config/firebase';
-import { ShieldCheck, Mail, Lock, AlertCircle, ArrowLeft, CheckCircle, Hash } from 'lucide-react';
+import PasswordInput from './PasswordInput';
+import { ShieldCheck, Mail, ArrowLeft, CheckCircle, AlertCircle, KeyRound, Loader2, RefreshCw } from 'lucide-react';
 
 const ForgotPassword = () => {
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const type = searchParams.get('type') || 'student'; // 'student' or 'admin'
 
-  const [email, setEmail] = useState('');
-  const [registerNumber, setRegisterNumber] = useState('');
+  const [step, setStep] = useState(1); // 1: Request Reset, 2: Enter Token & New Password
+  const [identifier, setIdentifier] = useState('');
+  const [token, setToken] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const [step, setStep] = useState(1); // 1: Verify Identity, 2: Reset Password
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [infoToken, setInfoToken] = useState('');
 
-  const handleAdminReset = async (e) => {
+  // Check for token in URL query params (e.g., /forgot-password?token=...) or sessionStorage
+  React.useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const queryToken = urlParams.get('token') || sessionStorage.getItem('reset_token');
+      if (queryToken) {
+        setToken(queryToken);
+        setInfoToken(queryToken);
+        setStep(2);
+      }
+    } catch (_) {}
+  }, []);
+
+  // Step 1: Submit email / registerNumber
+  const handleRequestReset = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccess('');
     setLoading(true);
+
+    try {
+      const res = await axios.post('/api/auth/forgot-password', {
+        identifier: identifier.trim()
+      });
+
+      const returnedToken = res.data.resetToken || res.data.token || res.data.reset_token || '';
+      if (returnedToken) {
+        setInfoToken(returnedToken);
+        setToken(returnedToken);
+        try { sessionStorage.setItem('reset_token', returnedToken); } catch (_) {}
+      }
+      setSuccess(res.data.message || 'Password reset initiated.');
+      setStep(2);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Unable to process password reset request.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Step 2: Submit new password with token
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
     setError('');
     setSuccess('');
 
-    try {
-      await sendPasswordResetEmail(firebaseAuth, email);
-      setSuccess('A password reset link has been sent to your email.');
-    } catch (err) {
-      console.error('Firebase reset error:', err);
-      if (err.code === 'auth/user-not-found') {
-        setError('No account found with this email.');
-      } else {
-        setError('Error sending reset email. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStudentVerify = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      await axios.post('/api/auth/verify-student-identity', {
-        email,
-        registerNumber
-      });
-      setStep(2);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Verification failed. Please check your details.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleStudentReset = async (e) => {
-    e.preventDefault();
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
+
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
+      setError('Password must be at least 6 characters.');
       return;
     }
 
     setLoading(true);
-    setError('');
-
     try {
-      await axios.post('/api/auth/reset-student-password', {
-        email,
-        registerNumber,
+      const res = await axios.post('/api/auth/reset-password', {
+        token: token.trim(),
         newPassword
       });
-      setSuccess('Password updated successfully! Redirecting to login...');
-      setTimeout(() => navigate('/login'), 2000);
+
+      try { sessionStorage.removeItem('reset_token'); } catch (_) {}
+      setSuccess(res.data.message || 'Password updated successfully! Redirecting to login...');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Reset failed. Please try again.');
+      setError(err.response?.data?.message || 'Password reset failed. Invalid or expired token.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <div className="bg-white p-3 rounded-full shadow-md">
-            <ShieldCheck className="h-10 w-10 text-blue-600" />
-          </div>
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Reset Password
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          {type === 'admin' ? 'Admin Portal Recovery' : 'Student Portal Recovery'}
-        </p>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-lg sm:rounded-xl sm:px-10 relative">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans">
+      <div className="w-full max-w-md">
+        {/* Back to Login link */}
+        <div className="mb-6">
           <Link
-            to={type === 'admin' ? '/admin/login' : '/login'}
-            className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 mb-6 transition-colors"
+            to="/login"
+            className="inline-flex items-center text-xs font-semibold text-gray-500 hover:text-blue-600 transition"
           >
             <ArrowLeft className="h-4 w-4 mr-1.5" />
-            Back to login
+            Back to Universal Login
           </Link>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white p-7 sm:p-8 rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-blue-600">
+              <KeyRound className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Password Recovery</h2>
+              <p className="text-xs text-gray-500">Universal Account Access</p>
+            </div>
+          </div>
 
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span className="text-sm">{error}</span>
+            <div className="mb-5 flex items-start space-x-3 p-3.5 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+              <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
 
           {success && (
-            <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
-              <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span className="text-sm">{success}</span>
+            <div className="mb-5 flex items-start space-x-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
+              <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
+              <span>{success}</span>
             </div>
           )}
 
-          {/* Admin Flow */}
-          {type === 'admin' && !success && (
-            <form className="space-y-5" onSubmit={handleAdminReset}>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Admin Email</label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="john.staff@dmice.edu"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
-              >
-                {loading ? 'Processing...' : 'Send Reset Link'}
-              </button>
-            </form>
-          )}
+          {step === 1 ? (
+            <form onSubmit={handleRequestReset} className="space-y-5">
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Enter your registered Email ID or Student Register Number. A secure reset token will be generated to update your password.
+              </p>
 
-          {/* Student Flow - Step 1 */}
-          {type === 'student' && step === 1 && !success && (
-            <form className="space-y-5" onSubmit={handleStudentVerify}>
-              <div className="bg-blue-50 p-3 rounded-lg text-xs text-blue-700 mb-4 border border-blue-100 leading-relaxed">
-                Enter your registered Email and Register Number to verify your identity.
-              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="you@college.edu"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Register Number</label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Hash className="h-5 w-5 text-gray-400" />
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1.5">
+                  Email ID or Register Number
+                </label>
+                <div className="relative rounded-md shadow-xs">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                    <Mail className="h-5 w-5" />
                   </div>
                   <input
                     type="text"
                     required
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="e.g. 2105..."
-                    value={registerNumber}
-                    onChange={(e) => setRegisterNumber(e.target.value)}
+                    disabled={loading}
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="e.g. 210523205004 or name@dmice.edu"
+                    className="block w-full pl-10 pr-3.5 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-600 focus:border-blue-600"
                   />
                 </div>
               </div>
+
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                className="w-full flex items-center justify-center py-2.5 px-4 rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition"
               >
-                {loading ? 'Verifying...' : 'Verify Details'}
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                    Searching Account...
+                  </>
+                ) : (
+                  'Continue with Recovery'
+                )}
               </button>
             </form>
-          )}
+          ) : (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              {infoToken && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900">
+                  <span className="font-semibold block mb-1">Generated Security Token:</span>
+                  <div className="font-mono bg-white p-2 rounded border border-blue-100 break-all select-all text-[11px]">
+                    {infoToken}
+                  </div>
+                  <span className="text-[11px] text-blue-700 mt-1 block">Valid for 15 minutes. Automatically populated below.</span>
+                </div>
+              )}
 
-          {/* Student Flow - Step 2 */}
-          {type === 'student' && step === 2 && !success && (
-            <form className="space-y-5" onSubmit={handleStudentReset}>
-              <div className="bg-green-50 p-3 rounded-lg text-xs text-green-700 mb-4 border border-green-100 flex items-center">
-                <CheckCircle className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                Identity verified! Enter your new password below.
-              </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="password"
-                    required
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="••••••••"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                  />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    Reset Token
+                  </label>
+                  {token && (
+                    <span className="text-[11px] font-medium text-emerald-600 flex items-center">
+                      <CheckCircle className="h-3.5 w-3.5 mr-1 inline" /> Auto-filled
+                    </span>
+                  )}
                 </div>
+                <input
+                  type="text"
+                  required
+                  disabled={loading}
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  placeholder="Paste your reset token here"
+                  className="block w-full px-3.5 py-2 bg-blue-50/40 border border-blue-200 rounded-lg text-xs font-mono text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-blue-600"
+                />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Confirm New Password</label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="password"
-                    required
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                    placeholder="••••••••"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
-                </div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                  New Password
+                </label>
+                <PasswordInput
+                  id="newPassword"
+                  name="newPassword"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  disabled={loading}
+                />
               </div>
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
-              >
-                {loading ? 'Updating...' : 'Update Password'}
-              </button>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wider mb-1">
+                  Confirm New Password
+                </label>
+                <PasswordInput
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your new password"
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="flex items-center space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  disabled={loading}
+                  className="w-1/3 py-2.5 px-3 border border-gray-300 rounded-lg text-xs font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-2/3 flex items-center justify-center py-2.5 px-4 rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 transition"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                      Updating...
+                    </>
+                  ) : (
+                    'Set New Password'
+                  )}
+                </button>
+              </div>
             </form>
-          )}
-
-          {success && type === 'admin' && (
-            <div className="mt-6 text-center">
-              <Link to="/admin/login" className="text-sm font-medium text-blue-600 hover:text-blue-500">
-                Go back to login
-              </Link>
-            </div>
           )}
         </div>
       </div>
